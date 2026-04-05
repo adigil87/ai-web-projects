@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>הקונסיליום הנוירו-קליני | מפת הדרכים</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Clinical Calm (Stone 50, Teal 700/800, Slate 800, Emerald 600) -->
+    <!-- Application Structure Plan: Revised for robust mobile responsiveness. Utilizes a natural scrolling body. On mobile, a compact sticky header is used with a full-screen toggleable overlay menu (Hamburger). On desktop, falls back to the persistent side-navigation dashboard layout. -->
+    <!-- Visualization & Content Choices: Maintained original choices. CRITICAL FIX: Implemented "Lazy Loading" for Chart.js canvases. Charts are now instantiated ONLY when their parent section loses the 'hidden' class. This prevents the known Chart.js bug where canvases drawn in display:none containers render at 0x0 size. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body { font-family: 'Assistant', sans-serif; }
+        h1, h2, h3, h4, .font-heading { font-family: 'Heebo', sans-serif; }
+        
+        /* Responsive Chart Containers */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin: 0 auto;
+            height: 300px; /* Default for mobile */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px; /* Larger for desktop */
+            }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f5f5f4; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .tab-active { border-bottom: 4px solid #0f766e; color: #0f766e; font-weight: bold; }
+        
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            margin: 10px 0;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #0f766e;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(15, 118, 110, 0.4);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-800 antialiased min-h-screen flex flex-col md:flex-row">
+
+    <!-- Mobile Header (Visible only on small screens) -->
+    <header class="md:hidden bg-teal-900 text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">&#9764;</span>
+            <span class="font-heading font-bold text-lg">הקונסיליום הנוירו-קליני</span>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-3xl focus:outline-none px-2">&#9776;</button>
+    </header>
+
+    <!-- Navigation (Sidebar on Desktop, Full Overlay on Mobile) -->
+    <nav id="main-nav" class="hidden fixed inset-0 bg-teal-900 z-50 flex-col overflow-y-auto md:flex md:relative md:w-72 md:h-screen md:sticky md:top-0 md:flex-shrink-0 shadow-2xl md:shadow-xl transition-all">
+        <!-- Close button for Mobile -->
+        <div class="md:hidden flex justify-end p-4">
+            <button onclick="toggleMobileMenu()" class="text-white text-4xl leading-none">&times;</button>
+        </div>
+
+        <div class="px-6 pb-6 pt-2 md:pt-6 text-center border-b border-teal-800">
+            <div class="text-4xl mb-2 hidden md:block">&#9764;</div>
+            <h1 class="font-heading text-2xl font-black tracking-tight text-white mb-2">הקונסיליום<br class="hidden md:block">הנוירו-קליני</h1>
+            <p class="text-teal-300 text-sm font-medium">אסטרטגיה קלינית לאריכות ימים מוחית</p>
+        </div>
+        
+        <div class="flex-grow p-4 flex flex-col gap-2">
+            <button onclick="navTo('intro')" class="nav-btn w-full text-right px-4 py-4 md:py-3 rounded-lg text-teal-100 font-semibold bg-teal-800 text-lg md:text-base">
+                <span class="inline-block w-8 md:w-6 text-center">&#128269;</span> סקירה קלינית
+            </button>
+            <button onclick="navTo('axis1')" class="nav-btn w-full text-right px-4 py-4 md:py-3 rounded-lg text-teal-100 text-lg md:text-base">
+                <span class="inline-block w-8 md:w-6 text-center">&#128200;</span> ציר 1: אבחון ושלבים
+            </button>
+            <button onclick="navTo('axis2')" class="nav-btn w-full text-right px-4 py-4 md:py-3 rounded-lg text-teal-100 text-lg md:text-base">
+                <span class="inline-block w-8 md:w-6 text-center">&#129504;</span> ציר 2: פתופיזיולוגיה
+            </button>
+            <button onclick="navTo('axis3')" class="nav-btn w-full text-right px-4 py-4 md:py-3 rounded-lg text-teal-100 text-lg md:text-base">
+                <span class="inline-block w-8 md:w-6 text-center">&#128138;</span> ציר 3: התערבות ושימור
+            </button>
+            <button onclick="navTo('axis4')" class="nav-btn w-full text-right px-4 py-4 md:py-3 rounded-lg text-teal-100 text-lg md:text-base">
+                <span class="inline-block w-8 md:w-6 text-center">&#127968;</span> ציר 4: סביבה וטריאז'
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 sm:p-8 md:p-12 w-full max-w-full overflow-x-hidden" id="main-content">
+        
+        <!-- INTRO SECTION -->
+        <section id="intro" class="content-section max-w-5xl mx-auto">
+            <div class="mb-8 md:mb-12 mt-4 md:mt-0">
+                <h2 class="font-heading text-3xl md:text-5xl font-black text-slate-900 mb-4 md:mb-6 leading-tight">מפת הדרכים הנוירו-קוגניטיבית</h2>
+                <p class="text-lg md:text-xl text-slate-600 leading-relaxed mb-6">
+                    ברוכים הבאים לדוח האבחון וההתערבות המקיף של הקונסיליום. מסמך זה מגשר בין חזית המחקר הביו-רפואי (Longevity & Neuroscience) לבין הנגשה פרקטית ומדויקת למשפחות ומטופלים.
+                </p>
+                <div class="bg-amber-50 border-r-4 border-amber-500 p-4 md:p-6 rounded-l-lg shadow-sm">
+                    <h4 class="font-bold text-amber-800 text-lg mb-2">&#9888; אזהרה קלינית: מתודולוגיית הקריאה</h4>
+                    <p class="text-amber-900 leading-relaxed text-sm md:text-base">
+                        המידע מוגש במודל <strong>Progressive Disclosure</strong>: כל פרק נפתח ב"שורה תחתונה למשפחה" (הנחיות פרקטיות ואמפתיות בגובה העיניים), וממשיך ל-"Deep Dive" המיועד לרופאים, חוקרים וביו-האקרים (כולל מנגנונים ביולוגיים וביו-מרקרים). האבחון והבנת המצב הנוכחי קודמים לכל פרוטוקול טיפולי.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- AXIS 1: DIAGNOSIS -->
+        <section id="axis1" class="content-section max-w-5xl mx-auto hidden">
+            <div class="mb-6 md:mb-8 mt-4 md:mt-0 border-b-2 border-teal-600 pb-4">
+                <span class="text-teal-700 font-bold tracking-widest text-xs md:text-sm uppercase">ציר 1</span>
+                <h2 class="font-heading text-2xl md:text-4xl font-bold text-slate-900 mt-2">אבחון מוקדם ושלבי הירידה הקוגניטיבית</h2>
+                <p class="text-slate-600 mt-2 text-sm md:text-base">זיהוי מדויק של חלון ההזדמנויות הטיפולי באמצעות מנגנון חשיפה קלינית.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md p-5 md:p-6 mb-8 border border-stone-200">
+                <h3 class="text-lg md:text-xl font-bold text-teal-800 mb-3 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128309;</span> השורה התחתונה למשפחה
+                </h3>
+                <p class="text-slate-700 leading-relaxed text-sm md:text-base">
+                    ירידה קוגניטיבית אינה רק "לשכוח איפה המפתחות". אם אתם חושדים בירידה אצל אדם אהוב, שימו לב לשינויים הבאים: קושי בביצוע משימות מורכבות מוכרות (כמו בישול מתכון קבוע או ניהול חשבונות הבית), הליכה לאיבוד במסלולי נהיגה שגרתיים, חזרה על אותה שאלה פעמים רבות באותה שיחה, ושינויים פתאומיים במצב הרוח, אפתיות או חשדנות. <strong class="text-rose-600">אם זיהיתם זאת, חלון ההזדמנויות הטיפולי פתוח אך מוגבל בזמן</strong>. יש לגשת לאבחון רפואי רשמי (רופא גריאטר או נוירולוג קוגניטיבי).
+                </p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-5 md:p-8 border border-slate-200 shadow-inner">
+                <h3 class="text-lg md:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128300;</span> Deep Dive: ניתוח קליני
+                </h3>
+                
+                <p class="text-xs md:text-sm text-slate-500 mb-6 bg-white p-2 rounded border inline-block">👆 אינטראקציה: גררו את הסליידר ימינה ושמאלה כדי לראות את ההתאמה בין המצב הקליני לביולוגי.</p>
+                
+                <div class="mb-10 px-2 md:px-4">
+                    <input type="range" id="staging-slider" min="0" max="3" value="0" step="1" class="w-full" aria-label="שלב המחלה">
+                    <div class="flex justify-between text-[10px] md:text-xs font-bold text-slate-500 mt-3 px-1 text-center">
+                        <span class="w-1/4">נורמלי / אופטימיזציה</span>
+                        <span class="w-1/4">שלב פרה-קליני</span>
+                        <span class="text-amber-600 w-1/4">MCI</span>
+                        <span class="text-rose-600 w-1/4">דמנציה</span>
+                    </div>
+                </div>
+
+                <div id="staging-details" class="bg-white p-4 md:p-6 rounded-lg border border-slate-200 min-h-[220px] mb-8 transition-all shadow-sm">
+                    <!-- JS Injects Content Here -->
+                </div>
+
+                <h4 class="font-bold text-slate-800 mb-4 border-b pb-2 text-sm md:text-base">מסלול הביו-מרקרים לאורך זמן</h4>
+                <div class="chart-container bg-white p-2 md:p-4 rounded-lg border border-slate-200 w-full overflow-hidden">
+                    <canvas id="biomarkerChart"></canvas>
+                </div>
+                <p class="text-[10px] md:text-xs text-slate-500 mt-3 text-center px-2">הגרף ממחיש את המודל המקובל להתפתחות סמנים ביולוגיים. שימו לב לירידה ב-Amyloid ב-CSF המעידה על שקיעתו במוח שנים רבות לפני הופעת תסמינים.</p>
+            </div>
+        </section>
+
+        <!-- AXIS 2: PATHOPHYSIOLOGY -->
+        <section id="axis2" class="content-section max-w-5xl mx-auto hidden">
+            <div class="mb-6 md:mb-8 mt-4 md:mt-0 border-b-2 border-teal-600 pb-4">
+                <span class="text-teal-700 font-bold tracking-widest text-xs md:text-sm uppercase">ציר 2</span>
+                <h2 class="font-heading text-2xl md:text-4xl font-bold text-slate-900 mt-2">הפתופיזיולוגיה של אלצהיימר</h2>
+                <p class="text-slate-600 mt-2 text-sm md:text-base">פענוח המנגנונים התאיים המניעים ניוון עצבי, מעבר לתיאוריית העמילואיד הקלאסית.</p>
+            </div>
+
+             <div class="bg-white rounded-xl shadow-md p-5 md:p-6 mb-8 border border-stone-200">
+                <h3 class="text-lg md:text-xl font-bold text-teal-800 mb-3 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128309;</span> השורה התחתונה למשפחה
+                </h3>
+                <p class="text-slate-700 leading-relaxed text-sm md:text-base">
+                    מחלת אלצהיימר אינה "סתם הזדקנות של המוח". מדובר במוח שנמצא במצב חירום כרוני. ישנם "פסולת" חלבונית שמצטברת (כמו אבנית), דלקת מקומית שיוצאת משליטה (שריפה שלא נכבית), וקושי של המוח להשתמש בסוכר לאנרגיה (ולכן קוראים לזה "סוכרת סוג 3"). בגלל המורכבות הזו, כדור אחד לא יכול לפתור את הכל, ולכן תזונה ואורח חיים הם קריטיים.
+                </p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-5 md:p-8 border border-slate-200 shadow-inner overflow-hidden w-full">
+                <h3 class="text-lg md:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128300;</span> Deep Dive: מערכות ותהליכים
+                </h3>
+                
+                <div class="flex border-b border-slate-300 mb-6 overflow-x-auto custom-scrollbar w-full snap-x">
+                    <button onclick="switchTab('patho-amyloid')" id="tab-amyloid" class="px-4 md:px-6 py-3 font-semibold text-slate-600 whitespace-nowrap tab-active text-sm md:text-base snap-start">עמילואיד וטאו</button>
+                    <button onclick="switchTab('patho-insulin')" id="tab-insulin" class="px-4 md:px-6 py-3 font-semibold text-slate-600 whitespace-nowrap hover:text-teal-700 text-sm md:text-base snap-start">סוכרת סוג 3</button>
+                    <button onclick="switchTab('patho-inflammation')" id="tab-inflammation" class="px-4 md:px-6 py-3 font-semibold text-slate-600 whitespace-nowrap hover:text-teal-700 text-sm md:text-base snap-start">דלקתיות ו-ApoE4</button>
+                </div>
+
+                <div id="patho-amyloid" class="patho-content px-1">
+                    <h4 class="text-base md:text-lg font-bold text-slate-800 mb-3">מפל העמילואיד והטאו</h4>
+                    <ul class="list-disc list-inside space-y-2 md:space-y-3 text-slate-700 text-sm md:text-base leading-relaxed">
+                        <li><strong>Amyloid Plaques:</strong> מנגנון חיתוך אבנורמלי של APP מייצר מקטעי $A\beta_{42}$ רעילים השוקעים מחוץ לתאים. (מטרה עיקרית של Lecanemab).</li>
+                        <li><strong>Neurofibrillary Tangles (Tau):</strong> חלבון הטאו עובר היפר-פוספורילציה, שוקע בתוך התא כסבכים, ומוביל לאפופטוזיס.</li>
+                        <li><strong>קשר סיבתי:</strong> העמילואיד הוא הטריגר המוקדם, אך שקיעת הטאו היא זו שקורלטיבית ישירות להתדרדרות הקלינית.</li>
+                    </ul>
+                </div>
+
+                <div id="patho-insulin" class="patho-content hidden px-1">
+                    <h4 class="text-base md:text-lg font-bold text-slate-800 mb-3">דיספונקציה מטאבולית: סוכרת מוחית</h4>
+                    <ul class="list-disc list-inside space-y-2 md:space-y-3 text-slate-700 text-sm md:text-base leading-relaxed">
+                        <li><strong>Brain Insulin Resistance:</strong> עמידות לאינסולין המונעת מנוירונים לנצל גלוקוז, מה שמוביל ל"הרעבת" התא (Mitochondrial dysfunction).</li>
+                        <li><strong>קשר גליקמי:</strong> סוכר גבוה בדם ואינסולין גבוה בצום מאיצים משמעותית התכווצות של ההיפוקמפוס.</li>
+                        <li><strong>Therapeutic Ketosis:</strong> שימוש קליני מבוקר בגופי קטון כמקור אנרגיה חלופי העוקף את מסלול האינסולין.</li>
+                    </ul>
+                </div>
+
+                <div id="patho-inflammation" class="patho-content hidden px-1">
+                    <h4 class="text-base md:text-lg font-bold text-slate-800 mb-3">נוירו-דלקתיות וגנטיקה (ApoE4)</h4>
+                    <ul class="list-disc list-inside space-y-2 md:space-y-3 text-slate-700 text-sm md:text-base leading-relaxed">
+                        <li><strong>Neuroinflammation:</strong> תאי Microglia מופעלים כרונית ומפרישים ציטוקינים פרו-דלקתיים המאיצים הרס סינפסות.</li>
+                        <li><strong>Apolipoprotein E (ApoE4):</strong> הגן המשמעותי ביותר. נשאות של אלל יחיד מגדילה סיכון פי 3, ונשאות כפולה פי 10-15.</li>
+                        <li><strong>משמעות קלינית:</strong> הגן פוגע בשלמות מחסום דם-מוח (BBB). פרוטוקולי טיפול משתנים דרמטית עבור נשאי הגן (מגבלות קשיחות על שומן רווי).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- AXIS 3: INTERVENTIONS -->
+        <section id="axis3" class="content-section max-w-5xl mx-auto hidden">
+            <div class="mb-6 md:mb-8 mt-4 md:mt-0 border-b-2 border-teal-600 pb-4">
+                <span class="text-teal-700 font-bold tracking-widest text-xs md:text-sm uppercase">ציר 3</span>
+                <h2 class="font-heading text-2xl md:text-4xl font-bold text-slate-900 mt-2">התערבות ושימור (Neuroprotection)</h2>
+                <p class="text-slate-600 mt-2 text-sm md:text-base">פרוטוקולים מבוססי מערכות להאטת ההתדרדרות בשטח.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md p-5 md:p-6 mb-8 border border-stone-200">
+                <h3 class="text-lg md:text-xl font-bold text-teal-800 mb-3 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128309;</span> השורה התחתונה למשפחה
+                </h3>
+                <p class="text-slate-700 leading-relaxed text-sm md:text-base mb-4">
+                    תחשבו על המוח כמו על גג דולף עם 36 חורים; כדור תרופתי סותם חור אחד, אבל עלינו לאטום כמה שיותר חורים במקביל. אלו הפעולות הדחופות ביותר:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mt-4">
+                    <div class="border-r-4 border-emerald-500 bg-emerald-50 p-3 md:p-4 rounded shadow-sm text-sm md:text-base">
+                        <strong class="text-emerald-800 block mb-1">1. תזונת MIND:</strong> דלת פחמימות ריקות. ירוקים, שמן זית, אגוזים. סילוק מלא של סוכר מעובד.
+                    </div>
+                    <div class="border-r-4 border-emerald-500 bg-emerald-50 p-3 md:p-4 rounded shadow-sm text-sm md:text-base">
+                        <strong class="text-emerald-800 block mb-1">2. איכות שינה:</strong> 7-8 שעות חובה. טיפול דחוף בדום נשימה בשינה (נחירות) שמרעיב את המוח מחמצן.
+                    </div>
+                    <div class="border-r-4 border-emerald-500 bg-emerald-50 p-3 md:p-4 rounded shadow-sm text-sm md:text-base">
+                        <strong class="text-emerald-800 block mb-1">3. תנועה:</strong> הליכה מהירה + אימוני כוח לפחות 150 דקות בשבוע. מזרימה דם למוח.
+                    </div>
+                    <div class="border-r-4 border-emerald-500 bg-emerald-50 p-3 md:p-4 rounded shadow-sm text-sm md:text-base">
+                        <strong class="text-emerald-800 block mb-1">4. הערכה רפואית:</strong> ניהול אגרסיבי של לחץ דם ובחינת תרופות ייעודיות לזיכרון.
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-5 md:p-8 border border-slate-200 shadow-inner w-full overflow-hidden">
+                <h3 class="text-lg md:text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128300;</span> Deep Dive: השוואת מודלים
+                </h3>
+
+                <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start mb-4">
+                    <div class="w-full lg:w-1/2 overflow-hidden">
+                        <p class="text-xs md:text-sm text-slate-600 mb-4 bg-white p-3 rounded border">השוואת ערוצי התערבות על פי פרסומי Lancet Commission ופרוטוקול ReCODE.</p>
+                        <div class="overflow-x-auto w-full border border-slate-200 rounded">
+                            <table class="min-w-[500px] w-full bg-white text-xs md:text-sm text-right">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700">
+                                        <th class="py-3 px-3 border-b font-bold w-1/3">אסטרטגיה</th>
+                                        <th class="py-3 px-3 border-b font-bold w-2/3">מנגנון (MoA) וביסוס</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="py-3 px-3 border-b font-semibold text-teal-800">אימון אירובי (Zone 2)</td>
+                                        <td class="py-3 px-3 border-b text-slate-600">העלאת BDNF, שיפור זילוח. <span class="font-bold text-emerald-600">ביסוס חזק</span></td>
+                                    </tr>
+                                    <tr class="bg-slate-50">
+                                        <td class="py-3 px-3 border-b font-semibold text-teal-800">היגיינת שינה (SWS)</td>
+                                        <td class="py-3 px-3 border-b text-slate-600">אופטימיזציית ה-Glymphatic System לפינוי פסולת. <span class="font-bold text-emerald-600">ביסוס חזק</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3 px-3 border-b font-semibold text-teal-800">Therapeutic Ketosis</td>
+                                        <td class="py-3 px-3 border-b text-slate-600">עקיפת תנגודת לאינסולין ע"י מתן $\beta$HB. <span class="font-bold text-amber-600">ביסוס בינוני</span></td>
+                                    </tr>
+                                    <tr class="bg-slate-50">
+                                        <td class="py-3 px-3 border-b font-semibold text-teal-800">Anti-Amyloid mAb</td>
+                                        <td class="py-3 px-3 border-b text-slate-600">פינוי אקטיבי (Lecanemab). <span class="font-bold text-emerald-600">חזק (FDA), עם סיכון ARIA</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full lg:w-1/2 chart-container bg-white p-2 md:p-4 rounded-lg border border-slate-200">
+                        <canvas id="interventionRadar"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AXIS 4: ENVIRONMENT & TRIAGE -->
+        <section id="axis4" class="content-section max-w-5xl mx-auto hidden">
+            <div class="mb-6 md:mb-8 mt-4 md:mt-0 border-b-2 border-teal-600 pb-4">
+                <span class="text-teal-700 font-bold tracking-widest text-xs md:text-sm uppercase">ציר 4</span>
+                <h2 class="font-heading text-2xl md:text-4xl font-bold text-slate-900 mt-2">סביבה תומכת וטריאז'</h2>
+                <p class="text-slate-600 mt-2 text-sm md:text-base">ארגון המרחב הפיזי, הטכנולוגי והנפשי לשימור עצמאות המטופל.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md p-5 md:p-6 mb-8 border border-stone-200">
+                <h3 class="text-lg md:text-xl font-bold text-teal-800 mb-3 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128309;</span> השורה התחתונה למשפחה
+                </h3>
+                <p class="text-slate-700 leading-relaxed text-sm md:text-base">
+                    ככל שהזיכרון הפנימי נחלש, עלינו להישען על "זיכרון חיצוני". סביבה מסודרת מונעת חרדה. הסירו שטיחונים למניעת נפילות, השתמשו בקופסאות תרופות ברורות, ותלו שעון גדול וברור. כלל זהב בתקשורת: לעולם אל תתווכחו עם המטופל על "האמת" המציאותית שלו - הצטרפו לעולמו, תמכו בו, והרגיעו את הרגש שעולה.
+                </p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-5 md:p-8 border border-slate-200 shadow-inner w-full">
+                <h3 class="text-lg md:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="text-xl md:text-2xl">&#128300;</span> צ'ק-ליסט: מוכנות קלינית וסביבתית
+                </h3>
+                <p class="text-xs md:text-sm text-slate-600 mb-6 bg-white p-3 rounded border">סמנו את הפעולות שבוצעו כדי להעריך את הפחתת העומס הקוגניטיבי (Allostatic Load).</p>
+
+                <div class="space-y-3" id="triage-checklist">
+                    <!-- Javascript populates this -->
+                </div>
+
+                <div class="mt-6 p-4 md:p-6 bg-teal-800 text-white rounded-lg flex flex-col md:flex-row items-center justify-between gap-4 shadow-md">
+                    <div class="text-center md:text-right">
+                        <span class="font-bold text-lg block">ציון מוכנות סביבתית:</span>
+                        <span class="text-xs md:text-sm text-teal-200">מדד הגנה ושימור עצמאות</span>
+                    </div>
+                    <div class="text-4xl md:text-5xl font-black bg-teal-900 px-6 py-2 rounded-lg border border-teal-700 transition-colors duration-500" id="triage-score">0%</div>
+                </div>
+            </div>
+            
+            <div class="mt-12 text-center text-xs md:text-sm text-slate-500 pb-10 border-t pt-6">
+                ---<br>
+                🚀 **Created by the Prompt Master** | <a href="https://www.facebook.com/share/16zdK1ntQV/" target="_blank" class="text-teal-600 font-bold hover:underline">Facebook</a> | <a href="https://www.linkedin.com/in/%D7%90%D7%9C%D7%A2%D7%93-%D7%A9%D7%99%D7%9C%D7%94-43808857?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" class="text-teal-600 font-bold hover:underline">LinkedIn</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- Mobile Menu Toggle Logic ---
+        function toggleMobileMenu() {
+            const nav = document.getElementById('main-nav');
+            nav.classList.toggle('hidden');
+        }
+
+        // --- Chart Instances (Global variables to prevent duplicate drawing) ---
+        let biomarkerChartInstance = null;
+        let interventionRadarInstance = null;
+
+        // --- Navigation & Lazy Loading Logic ---
+        function navTo(sectionId) {
+            // Close mobile menu if open
+            const nav = document.getElementById('main-nav');
+            if (window.innerWidth < 768 && !nav.classList.contains('hidden')) {
+                nav.classList.add('hidden');
+            }
+
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show target section FIRST, so it has a physical width/height for the charts to measure
+            const targetSection = document.getElementById(sectionId);
+            targetSection.classList.remove('hidden');
+            
+            // Reset button styles
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-teal-800', 'font-semibold');
+                btn.classList.replace('text-white', 'text-teal-100');
+            });
+            
+            // Highlight active button
+            const activeBtns = document.querySelectorAll(`button[onclick="navTo('${sectionId}')"]`);
+            activeBtns.forEach(btn => {
+                btn.classList.add('bg-teal-800', 'font-semibold', 'text-white');
+            });
+            
+            // Scroll to top smoothly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // LAZY LOAD CHARTS: Only create them once their container is visible
+            if(sectionId === 'axis1') {
+                initBiomarkerChart();
+            }
+            if(sectionId === 'axis3') {
+                initRadarChart();
+            }
+        }
+
+        // --- Axis 1: Chart.js Initialization (Lazy) ---
+        function initBiomarkerChart() {
+            if (biomarkerChartInstance !== null) return; // Already exists, do nothing
+
+            Chart.defaults.font.family = "'Assistant', sans-serif";
+            const ctxBio = document.getElementById('biomarkerChart').getContext('2d');
+            
+            biomarkerChartInstance = new Chart(ctxBio, {
+                type: 'line',
+                data: {
+                    labels: ['-15 ש"', '-10 ש"', '-5 ש"', 'MCI', '+5 ש"', '+10 ש"'],
+                    datasets: [
+                        { label: 'עמילואיד (CSF)', data: [90, 50, 30, 20, 10, 5], borderColor: '#0f766e', tension: 0.4, borderWidth: 3 },
+                        { label: 'טאו וסבכים', data: [5, 10, 30, 60, 80, 95], borderColor: '#e11d48', tension: 0.4, borderWidth: 3 },
+                        { label: 'תפקוד קוגניטיבי', data: [100, 100, 95, 80, 45, 15], borderColor: '#0f172a', borderDash: [5, 5], tension: 0.4, borderWidth: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', rtl: true, labels: { boxWidth: 12, padding: 15, font: {size: 11} } },
+                        tooltip: { rtl: true }
+                    },
+                    scales: {
+                        x: { reverse: true, grid: { display: false }, ticks: { font: {size: 10} } },
+                        y: { display: false, min: 0, max: 105 }
+                    }
+                }
+            });
+        }
+
+        // --- Axis 3: Radar Chart Initialization (Lazy) ---
+        function initRadarChart() {
+            if (interventionRadarInstance !== null) return; // Already exists, do nothing
+
+            const ctxRadar = document.getElementById('interventionRadar').getContext('2d');
+            
+            interventionRadarInstance = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['אנטי-דלקת', 'זילוח דם', 'פינוי פלאקים', 'נוירוגנזה', 'מטאבוליזם'],
+                    datasets: [
+                        { label: 'פרוטוקול חיים (MIND)', data: [8, 9, 3, 9, 9], backgroundColor: 'rgba(15, 118, 110, 0.2)', borderColor: '#0f766e', borderWidth: 2 },
+                        { label: 'תרופות (נוגדנים)', data: [2, 1, 9, 1, 1], backgroundColor: 'rgba(225, 29, 72, 0.2)', borderColor: '#e11d48', borderWidth: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', rtl: true, labels: { boxWidth: 12, font: {size: 11} } }
+                    },
+                    scales: {
+                        r: { ticks: { display: false }, pointLabels: { font: { size: 10, family: 'Assistant' } } }
+                    }
+                }
+            });
+        }
+
+        // --- Axis 1: Staging Slider Logic ---
+        const stagingData = [
+            {
+                title: "השלב הנורמלי",
+                clinical: "תפקוד מלא, אין ירידה בזיכרון.",
+                bio: "היעדר פלאקים. זמן אידיאלי ל-Bio-hacking וטיפול בלחץ דם/סוכר מניעתי."
+            },
+            {
+                title: "שלב פרה-קליני",
+                clinical: "אולי תחושה אישית של שכחה, אבל מבחנים רשמיים תקינים לחלוטין.",
+                bio: "התחלת הצטברות עמילואיד במוח (נראה כירידה במדדי ה-CSF). אין עדיין נזק נרחב."
+            },
+            {
+                title: "MCI (Mild Cognitive Impairment)",
+                clinical: "ירידה קלה בזיכרון שמאומתת במבחן, אבל האדם עדיין עצמאי לחלוטין ביומיום.",
+                bio: "התפשטות חלבון הטאו והתחלת התכווצות מוחית. חלון ההזדמנויות הטיפולי הקריטי ביותר."
+            },
+            {
+                title: "דמנציה מתקדמת",
+                clinical: "פגיעה מהותית בעצמאות (ניהול כסף, נהיגה, בלבול במרחב ובזמן).",
+                bio: "נזק מוחי נרחב. הטיפול עובר להתמקדות בתמיכה, הקלת תסמינים, וארגון סביבתי."
+            }
+        ];
+
+        const slider = document.getElementById('staging-slider');
+        const detailsBox = document.getElementById('staging-details');
+
+        function updateStaging() {
+            const val = parseInt(slider.value);
+            const data = stagingData[val];
+            
+            let borderClass = val === 0 ? "border-emerald-500" : val === 1 ? "border-blue-500" : val === 2 ? "border-amber-500" : "border-rose-500";
+            let bgClass = val === 0 ? "bg-emerald-50" : val === 1 ? "bg-blue-50" : val === 2 ? "bg-amber-50" : "bg-rose-50";
+
+            detailsBox.className = `p-4 md:p-6 rounded-lg border-l-4 min-h-[220px] mb-8 transition-all shadow-sm ${borderClass} ${bgClass}`;
+            detailsBox.innerHTML = `
+                <h4 class="text-lg md:text-xl font-bold mb-3 text-slate-800">${data.title}</h4>
+                <div class="mb-3">
+                    <strong class="text-slate-700 bg-white px-2 py-1 rounded text-xs md:text-sm shadow-sm inline-block mb-1 border">הסתמנות קלינית:</strong>
+                    <p class="text-slate-700 text-sm md:text-base leading-relaxed mt-1 font-medium">${data.clinical}</p>
+                </div>
+                <div>
+                    <strong class="text-slate-700 bg-white px-2 py-1 rounded text-xs md:text-sm shadow-sm inline-block mb-1 border">תמונת ביו-מרקרים:</strong>
+                    <p class="text-slate-600 text-sm md:text-base leading-relaxed mt-1">${data.bio}</p>
+                </div>
+            `;
+        }
+
+        if(slider) {
+            slider.addEventListener('input', updateStaging);
+            updateStaging(); 
+        }
+
+        // --- Axis 2: Tab Logic ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.patho-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.remove('tab-active', 'text-teal-700'));
+            
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId.split('-')[1]).classList.add('tab-active', 'text-teal-700');
+        }
+
+        // --- Axis 4: Checklist ---
+        const triageItems = [
+            { id: "t1", label: "ביצוע הערכה רפואית לשלילת תרופות שפוגעות בזיכרון.", weight: 20 },
+            { id: "t2", label: "הסרת שטיחונים וכבלים, והתקנת תאורת לילה למניעת נפילות.", weight: 20 },
+            { id: "t3", label: "ביצוע בדיקות דם מקיפות (B12, הומוציסטאין, ויטמין D, תריס).", weight: 20 },
+            { id: "t4", label: "התקנת מערכת חכמה לניהול תרופות למניעת מינון כפול.", weight: 20 },
+            { id: "t5", label: "חשיפה יומית לשמש בבוקר לאיפוס שעון ביולוגי (צירקדי).", weight: 20 }
+        ];
+
+        const checklistContainer = document.getElementById('triage-checklist');
+        const scoreDisplay = document.getElementById('triage-score');
+
+        triageItems.forEach(item => {
+            const div = document.createElement('div');
+            div.className = "flex items-start bg-white p-3 rounded border border-slate-200 hover:border-teal-500 transition-colors";
+            div.innerHTML = `
+                <div class="flex-shrink-0 pt-1 relative pl-2">
+                    <input type="checkbox" id="${item.id}" class="triage-cb w-5 h-5 text-teal-600 rounded focus:ring-teal-500 border-gray-300 cursor-pointer" data-weight="${item.weight}">
+                </div>
+                <label for="${item.id}" class="text-slate-700 text-sm md:text-base cursor-pointer select-none leading-relaxed">
+                    ${item.label}
+                </label>
+            `;
+            checklistContainer.appendChild(div);
+        });
+
+        function calculateScore() {
+            let total = 0;
+            document.querySelectorAll('.triage-cb:checked').forEach(cb => {
+                total += parseInt(cb.dataset.weight);
+            });
+            scoreDisplay.textContent = total + '%';
+            
+            // Dynamic styling based on score
+            if (total < 40) {
+                scoreDisplay.className = "text-4xl md:text-5xl font-black px-6 py-2 rounded-lg border text-rose-200 bg-rose-900 border-rose-700 transition-colors duration-300";
+            } else if (total < 80) {
+                scoreDisplay.className = "text-4xl md:text-5xl font-black px-6 py-2 rounded-lg border text-amber-200 bg-amber-900 border-amber-700 transition-colors duration-300";
+            } else {
+                scoreDisplay.className = "text-4xl md:text-5xl font-black px-6 py-2 rounded-lg border text-teal-200 bg-teal-900 border-teal-700 transition-colors duration-300";
+            }
+        }
+
+        // Add event listeners
+        document.querySelectorAll('.triage-cb').forEach(cb => {
+            cb.addEventListener('change', calculateScore);
+        });
+
+        // Initialize state (Show intro first)
+        navTo('intro');
+    </script>
+</body>
+</html>
